@@ -1,3 +1,4 @@
+
 //
 //  GameScene.swift
 //  FlappyBird
@@ -6,22 +7,31 @@
 //
 
 import SpriteKit
+import AVFoundation
 
-class GameScene: SKScene, SKPhysicsContactDelegate {
+class GameScene: SKScene, SKPhysicsContactDelegate, AVAudioPlayerDelegate {
     
+    var audioPlayer:AVAudioPlayer!
     var scrollNode:SKNode!
     var wallNode:SKNode!
     var bird:SKSpriteNode!
+    var item:SKSpriteNode!
     
     // 衝突判定カテゴリー
-    let birdCategory: UInt32 = 1 << 0       // 0...00001
-    let groundCategory: UInt32 = 1 << 1     // 0...00010
-    let wallCategory: UInt32 = 1 << 2       // 0...00100
-    let scoreCategory: UInt32 = 1 << 3      // 0...01000
+    let birdCategory: UInt32 = 1 << 0       // 0...000001
+    let groundCategory: UInt32 = 1 << 1     // 0...000010
+    let wallCategory: UInt32 = 1 << 2       // 0...000100
+    let scoreCategory: UInt32 = 1 << 3      // 0...001000
+    let itemCategory: UInt32 = 1 << 4       // 0...010000
+    let itemScoreCategory: UInt32 = 1 << 5  // 0...100000
     
     // スコア用
     var score = 0
+    var itemScore = 0
+    var totalScore = 0
     var scoreLabelNode:SKLabelNode!
+    var itemScoreLabelNode:SKLabelNode!
+    var totalScoreLabelNode:SKLabelNode!
     var bestScoreLabelNode:SKLabelNode!
     let userDefaults:UserDefaults = UserDefaults.standard
     
@@ -49,6 +59,27 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         setupWall()
         setupBird()
         setupScoreLabel()
+        
+        // 再生する audio ファイルのパスを取得
+        let audioPath = Bundle.main.path(forResource: "coin04", ofType:"mp3")!
+        let audioUrl = URL(fileURLWithPath: audioPath)
+        
+        // auido を再生するプレイヤーを作成する
+        var audioError:NSError?
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: audioUrl)
+        } catch let error as NSError {
+            audioError = error
+            audioPlayer = nil
+        }
+        
+        // エラーが起きたとき
+        if let error = audioError {
+            print("Error \(error.localizedDescription)")
+        }
+        
+        audioPlayer.delegate = self
+        audioPlayer.prepareToPlay()
     }
     
     func setupGround() {
@@ -134,6 +165,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func setupWall() {
+        // アイテムの画像を2読み込む
+        let itemTexture = SKTexture(imageNamed: "item")
+        itemTexture.filteringMode = .linear
+        
         // 壁の画像を読み込む
         let wallTexture = SKTexture(imageNamed: "wall")
         wallTexture.filteringMode = .linear
@@ -202,6 +237,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             wall.addChild(upper)
             
+            // アイテムを作成
+            self.item = SKSpriteNode(texture: itemTexture)
+            // アイテムの位置（調整）
+            self.item.position = CGPoint(x: -110, y: under_wall_y + wallTexture.size().height - 50)
+            
+            // スプライトに物理演算を設定する
+            self.item.physicsBody = SKPhysicsBody(rectangleOf: itemTexture.size())
+            self.item.physicsBody?.isDynamic = false
+            self.item.physicsBody?.categoryBitMask = self.itemCategory
+            self.item.physicsBody?.contactTestBitMask = self.birdCategory
+            
+            wall.addChild(self.item)
+            
             // スコアアップ用のノード
             let scoreNode = SKNode()
             scoreNode.position = CGPoint(x: upper.size.width + birdSize.width / 2, y: self.frame.height / 2)
@@ -264,7 +312,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if scrollNode.speed > 0 {
             // 鳥の速度をゼロにする
             bird.physicsBody?.velocity = CGVector.zero
-
+            
             // 鳥に縦方向の力を与える
             bird.physicsBody?.applyImpulse(CGVector(dx: 0, dy: 15))
         } else if bird.speed == 0 {
@@ -279,20 +327,24 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             return
         }
         
-        if (contact.bodyA.categoryBitMask & scoreCategory) == scoreCategory || (contact.bodyB.categoryBitMask & scoreCategory) == scoreCategory {
+        if (contact.bodyA.categoryBitMask & scoreCategory) == scoreCategory ||
+            (contact.bodyB.categoryBitMask & scoreCategory) == scoreCategory  {
             // スコア用の物体と衝突した
             print("ScoreUp")
             score += 1
             scoreLabelNode.text = "Score:\(score)"
             
-            // ベストスコア更新か確認する --- ここから ---
-            var bestScore = userDefaults.integer(forKey: "BEST")
-            if score > bestScore {
-                bestScore = score
-                bestScoreLabelNode.text = "Best Score:\(bestScore)"
-                userDefaults.set(bestScore, forKey: "BEST")
-                userDefaults.synchronize()
-            }
+        } else if(contact.bodyA.categoryBitMask & itemCategory) == itemCategory ||
+                    (contact.bodyB.categoryBitMask & itemCategory) == itemCategory {
+            // アイテムの物体と衝突した
+            print("ItemScoreUp")
+            itemScore += 1
+            itemScoreLabelNode.text = "Item Score:\(itemScore)"
+            //音を鳴らす
+            audioPlayer.play()
+            //ノードを削除する
+            contact.bodyA.node?.removeFromParent()
+            
         } else {
             // 壁か地面と衝突した
             print("GameOver")
@@ -307,19 +359,34 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 self.bird.speed = 0
             })
         }
+        
+        //トータルスコア表示更新
+        totalScoreLabelNode.text = "Total Score:\(score + itemScore)"
+        // ベストスコア更新か確認する
+        var bestScore = userDefaults.integer(forKey: "BEST")
+        if score + itemScore > bestScore {
+            bestScore = score + itemScore
+            bestScoreLabelNode.text = "Best Score:\(bestScore)"
+            userDefaults.set(bestScore, forKey: "BEST")
+            userDefaults.synchronize()
+        }
     }
     
     func restart() {
         score = 0
+        itemScore = 0
+        totalScore = 0
         scoreLabelNode.text = "Score:\(score)"
-
+        itemScoreLabelNode.text = "Item Score:\(itemScore)"
+        totalScoreLabelNode.text = "Total Score:\(score + itemScore)"
+        
         bird.position = CGPoint(x: self.frame.size.width * 0.2, y:self.frame.size.height * 0.7)
         bird.physicsBody?.velocity = CGVector.zero
         bird.physicsBody?.collisionBitMask = groundCategory | wallCategory
         bird.zRotation = 0
-
+        
         wallNode.removeAllChildren()
-
+        
         bird.speed = 1
         scrollNode.speed = 1
     }
@@ -333,16 +400,33 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         scoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
         scoreLabelNode.text = "Score:\(score)"
         self.addChild(scoreLabelNode)
-
+        
+        itemScore = 0
+        itemScoreLabelNode = SKLabelNode()
+        itemScoreLabelNode.fontColor = UIColor.black
+        itemScoreLabelNode.position = CGPoint(x: 10, y: self.frame.size.height - 90)
+        itemScoreLabelNode.zPosition = 100 // 一番手前に表示する
+        itemScoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
+        itemScoreLabelNode.text = "Item Score:\(score)"
+        self.addChild(itemScoreLabelNode)
+        
+        totalScore = 0
+        totalScoreLabelNode = SKLabelNode()
+        totalScoreLabelNode.fontColor = UIColor.black
+        totalScoreLabelNode.position = CGPoint(x: 10, y: self.frame.size.height - 120)
+        totalScoreLabelNode.zPosition = 100 // 一番手前に表示する
+        totalScoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
+        totalScoreLabelNode.text = "Total Score:\(score + itemScore)"
+        self.addChild(totalScoreLabelNode)
+        
         bestScoreLabelNode = SKLabelNode()
         bestScoreLabelNode.fontColor = UIColor.black
-        bestScoreLabelNode.position = CGPoint(x: 10, y: self.frame.size.height - 90)
+        bestScoreLabelNode.position = CGPoint(x: 10, y: self.frame.size.height - 150)
         bestScoreLabelNode.zPosition = 100 // 一番手前に表示する
         bestScoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
-
+        
         let bestScore = userDefaults.integer(forKey: "BEST")
         bestScoreLabelNode.text = "Best Score:\(bestScore)"
         self.addChild(bestScoreLabelNode)
     }
-
 }

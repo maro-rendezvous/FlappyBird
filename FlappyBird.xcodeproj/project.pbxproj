@@ -14,6 +14,7 @@
 		517E5610266C422E0073F240 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 517E560F266C422E0073F240 /* Assets.xcassets */; };
 		517E5613266C422E0073F240 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 517E5611266C422E0073F240 /* LaunchScreen.storyboard */; };
 		517E561D266C47360073F240 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 517E561C266C47360073F240 /* GameScene.swift */; };
+		517E56232674599B0073F240 /* coin04.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 517E56222674599B0073F240 /* coin04.mp3 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 		517E5612266C422E0073F240 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		517E5614266C422E0073F240 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		517E561C266C47360073F240 /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
+		517E56222674599B0073F240 /* coin04.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = coin04.mp3; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,6 +66,7 @@
 				517E560C266C422E0073F240 /* Main.storyboard */,
 				517E560F266C422E0073F240 /* Assets.xcassets */,
 				517E561C266C47360073F240 /* GameScene.swift */,
+				517E56222674599B0073F240 /* coin04.mp3 */,
 				517E5611266C422E0073F240 /* LaunchScreen.storyboard */,
 				517E5614266C422E0073F240 /* Info.plist */,
 			);
@@ -128,6 +131,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				517E5613266C422E0073F240 /* LaunchScreen.storyboard in Resources */,
+				517E56232674599B0073F240 /* coin04.mp3 in Resources */,
 				517E5610266C422E0073F240 /* Assets.xcassets in Resources */,
 				517E560E266C422E0073F240 /* Main.storyboard in Resources */,
 			);
